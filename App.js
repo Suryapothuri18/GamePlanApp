@@ -21,7 +21,7 @@ const Stack = createStackNavigator();
 const HeaderLogo = () => (
   <View style={styles.logoContainer}>
     <Image
-      source={require('/Users/suryapothuri/GamePlan/assets/logo.png')}
+      source={require('./assets/logo.png')}
       style={styles.logo}
       resizeMode="cover"
     />
