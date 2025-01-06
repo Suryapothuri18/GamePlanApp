@@ -57,12 +57,6 @@ export default function StudentProfileScreen({ route, navigation }) {
       <LinearGradient colors={['#171717', '#444444']} style={styles.gradient}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Unable to load student profile.</Text>
-          <TouchableOpacity
-            style={styles.navigationButton}
-            onPress={() => navigation.navigate('StudentDashboard')}
-          >
-            <Text style={styles.navigationButtonText}>Back to Dashboard</Text>
-          </TouchableOpacity>
         </View>
       </LinearGradient>
     );
@@ -107,14 +101,6 @@ export default function StudentProfileScreen({ route, navigation }) {
           <Text style={styles.infoLabel}>Gender:</Text>
           <Text style={styles.infoValue}>{studentData.gender || 'N/A'}</Text>
         </View>
-
-        {/* Back to Dashboard Button */}
-        <TouchableOpacity
-          style={styles.navigationButton}
-          onPress={() => navigation.navigate('StudentDashboard', { student: studentData })}
-        >
-          <Text style={styles.navigationButtonText}>Back to Dashboard</Text>
-        </TouchableOpacity>
       </ScrollView>
     </LinearGradient>
   );
@@ -150,14 +136,6 @@ const styles = StyleSheet.create({
   infoSection: { backgroundColor: '#1E1E1E', padding: 15, borderRadius: 10 },
   infoLabel: { color: '#CCCCCC', marginBottom: 5 },
   infoValue: { color: '#FFFFFF', fontSize: 16 },
-  navigationButton: {
-    backgroundColor: '#DA0037',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  navigationButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
   settingsIcon: {
     position: 'absolute',
     top: 10,

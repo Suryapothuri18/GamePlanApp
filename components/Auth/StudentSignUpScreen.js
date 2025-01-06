@@ -8,80 +8,139 @@ import {
   ScrollView,
   Alert,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Picker } from '@react-native-picker/picker';
-import { auth, db } from '../../utils/firebaseConfig'; // Import Firebase instances
+import { auth, db } from '../../utils/firebaseConfig';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
 export default function StudentSignUpScreen({ navigation }) {
-  const [fullName, setFullName] = useState('');
-  const [age, setAge] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [trainerID, setTrainerID] = useState('');
-  const [address, setAddress] = useState('');
-  const [sport, setSport] = useState('');
-  const [gender, setGender] = useState('');
-  const [emergencyContact, setEmergencyContact] = useState('');
-  const [studentID, setStudentID] = useState('');
+  const [formData, setFormData] = useState({
+    fullName: '',
+    age: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    trainerID: '',
+    address: '',
+    sport: '',
+    gender: '',
+    emergencyContact: '',
+    studentID: '',
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleInputChange = (field, value) => {
+    setFormData((prevState) => ({ ...prevState, [field]: value }));
+  };
 
   const generateStudentID = () => {
     const generatedID = Math.floor(100000 + Math.random() * 900000).toString();
-    setStudentID(generatedID);
+    handleInputChange('studentID', generatedID);
     Alert.alert('Student ID Generated', `Your Student ID is: ${generatedID}`);
   };
 
-  const handleSignUp = async () => {
-    if (!fullName || !age || !sport || !gender || !email || !password || !confirmPassword || !trainerID || !studentID) {
+  const validateForm = () => {
+    const {
+      fullName,
+      age,
+      sport,
+      gender,
+      email,
+      password,
+      confirmPassword,
+      trainerID,
+      studentID,
+    } = formData;
+
+    if (
+      !fullName ||
+      !age ||
+      !sport ||
+      !gender ||
+      !email ||
+      !password ||
+      !confirmPassword ||
+      !trainerID ||
+      !studentID
+    ) {
       Alert.alert('Error', 'Please fill in all mandatory fields.');
-      return;
+      return false;
     }
 
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match.');
-      return;
+      return false;
     }
 
+    return true;
+  };
+
+  const handleSignUp = async () => {
+    if (!validateForm()) return;
+
+    setLoading(true);
+
     try {
+      // Validate Trainer ID
+      const trainerDocRef = doc(db, 'trainers', formData.trainerID);
+      const trainerDoc = await getDoc(trainerDocRef);
+
+      if (!trainerDoc.exists()) {
+        Alert.alert('Success', "Student account created successfully");
+        setLoading(false);
+        return;
+      }
+
       // Create student account in Firebase Authentication
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
       const user = userCredential.user;
 
       // Save student data to Firestore
       const studentData = {
-        name: fullName,
-        age: parseInt(age, 10),
-        email,
-        trainerID,
-        studentID,
-        address,
-        sport,
-        gender,
-        emergencyContact,
+        name: formData.fullName,
+        age: parseInt(formData.age, 10),
+        email: formData.email,
+        trainerID: formData.trainerID,
+        studentID: formData.studentID,
+        address: formData.address,
+        sport: formData.sport,
+        gender: formData.gender,
+        emergencyContact: formData.emergencyContact,
         image: 'https://via.placeholder.com/150', // Default profile image
       };
 
       await setDoc(doc(db, 'students', user.uid), studentData);
 
       Alert.alert('Success', 'Student account created successfully!');
-      navigation.navigate('Login'); // Redirect to login screen after successful sign-up
+      navigation.navigate('Login');
     } catch (error) {
       console.error('Error saving student data:', error);
-      Alert.alert('Error', `Failed to create account: ${error.message}`);
+      if (error.code === 'auth/email-already-in-use') {
+        Alert.alert('Error', 'This email is already in use. Please use a different email.');
+      } else if (error.code === 'permission-denied') {
+        Alert.alert('Error', 'You do not have permission to perform this operation.');
+      } else {
+        Alert.alert('Error', `Failed to save data: ${error.message}`);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <LinearGradient
-      colors={['#171717', '#444444']} // Gradient background
-      style={styles.gradient}
-    >
+    <LinearGradient colors={['#171717', '#444444']} style={styles.gradient}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <Text style={styles.heading}>Student Sign Up</Text>
-        <Text style={styles.subheading}>Create your student profile and start your sports journey</Text>
+        <Text style={styles.subheading}>
+          Create your student profile and start your sports journey
+        </Text>
 
         {/* Full Name */}
         <Text style={styles.label}>Full Name</Text>
@@ -89,8 +148,8 @@ export default function StudentSignUpScreen({ navigation }) {
           style={styles.input}
           placeholder="Enter your full name"
           placeholderTextColor="#CCCCCC"
-          value={fullName}
-          onChangeText={setFullName}
+          value={formData.fullName}
+          onChangeText={(value) => handleInputChange('fullName', value)}
         />
 
         {/* Age */}
@@ -99,8 +158,8 @@ export default function StudentSignUpScreen({ navigation }) {
           style={styles.input}
           placeholder="Enter your age"
           placeholderTextColor="#CCCCCC"
-          value={age}
-          onChangeText={setAge}
+          value={formData.age}
+          onChangeText={(value) => handleInputChange('age', value)}
           keyboardType="numeric"
         />
 
@@ -108,10 +167,9 @@ export default function StudentSignUpScreen({ navigation }) {
         <Text style={styles.label}>Gender</Text>
         <View style={styles.pickerContainer}>
           <Picker
-            selectedValue={gender}
-            onValueChange={(itemValue) => setGender(itemValue)}
+            selectedValue={formData.gender}
+            onValueChange={(value) => handleInputChange('gender', value)}
             style={styles.picker}
-            dropdownIconColor="#EDEDED"
           >
             <Picker.Item label="Select Gender" value="" />
             <Picker.Item label="Male" value="Male" />
@@ -126,8 +184,8 @@ export default function StudentSignUpScreen({ navigation }) {
           style={styles.input}
           placeholder="Enter your email address"
           placeholderTextColor="#CCCCCC"
-          value={email}
-          onChangeText={setEmail}
+          value={formData.email}
+          onChangeText={(value) => handleInputChange('email', value)}
           keyboardType="email-address"
           autoCapitalize="none"
         />
@@ -138,8 +196,8 @@ export default function StudentSignUpScreen({ navigation }) {
           style={styles.input}
           placeholder="Create a password"
           placeholderTextColor="#CCCCCC"
-          value={password}
-          onChangeText={setPassword}
+          value={formData.password}
+          onChangeText={(value) => handleInputChange('password', value)}
           secureTextEntry
         />
 
@@ -149,8 +207,8 @@ export default function StudentSignUpScreen({ navigation }) {
           style={styles.input}
           placeholder="Re-enter your password"
           placeholderTextColor="#CCCCCC"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
+          value={formData.confirmPassword}
+          onChangeText={(value) => handleInputChange('confirmPassword', value)}
           secureTextEntry
         />
 
@@ -160,8 +218,8 @@ export default function StudentSignUpScreen({ navigation }) {
           style={styles.input}
           placeholder="Enter your trainer ID"
           placeholderTextColor="#CCCCCC"
-          value={trainerID}
-          onChangeText={setTrainerID}
+          value={formData.trainerID}
+          onChangeText={(value) => handleInputChange('trainerID', value)}
         />
 
         {/* Student ID */}
@@ -169,7 +227,7 @@ export default function StudentSignUpScreen({ navigation }) {
         <View style={styles.studentIDContainer}>
           <TextInput
             style={[styles.input, { flex: 1, backgroundColor: '#555555', color: '#AAAAAA' }]}
-            value={studentID}
+            value={formData.studentID}
             editable={false}
             placeholder="Student ID will be generated"
             placeholderTextColor="#CCCCCC"
@@ -185,34 +243,24 @@ export default function StudentSignUpScreen({ navigation }) {
           style={styles.input}
           placeholder="Enter your address"
           placeholderTextColor="#CCCCCC"
-          value={address}
-          onChangeText={setAddress}
+          value={formData.address}
+          onChangeText={(value) => handleInputChange('address', value)}
         />
 
         {/* Sport */}
         <Text style={styles.label}>Sport</Text>
         <View style={styles.pickerContainer}>
           <Picker
-            selectedValue={sport}
-            onValueChange={(itemValue) => setSport(itemValue)}
+            selectedValue={formData.sport}
+            onValueChange={(value) => handleInputChange('sport', value)}
             style={styles.picker}
-            dropdownIconColor="#EDEDED"
           >
             <Picker.Item label="Select Sport" value="" />
-            {[
-              'Badminton',
-              'Basketball',
-              'Cricket',
-              'Cycling',
-              'Football',
-              'Ice Hockey',
-              'Karate',
-              'Skying',
-              'Swimming',
-              'Volleyball',
-            ].map((sportOption) => (
-              <Picker.Item key={sportOption} label={sportOption} value={sportOption} />
-            ))}
+            {['Badminton', 'Basketball', 'Cricket', 'Cycling', 'Football', 'Swimming'].map(
+              (sportOption) => (
+                <Picker.Item key={sportOption} label={sportOption} value={sportOption} />
+              )
+            )}
           </Picker>
         </View>
 
@@ -222,21 +270,26 @@ export default function StudentSignUpScreen({ navigation }) {
           style={styles.input}
           placeholder="Enter emergency contact number"
           placeholderTextColor="#CCCCCC"
-          value={emergencyContact}
-          onChangeText={setEmergencyContact}
+          value={formData.emergencyContact}
+          onChangeText={(value) => handleInputChange('emergencyContact', value)}
           keyboardType="phone-pad"
         />
 
         {/* Sign Up Button */}
-        <TouchableOpacity style={styles.signupButton} onPress={handleSignUp}>
-          <Text style={styles.signupButtonText}>Sign Up</Text>
+        <TouchableOpacity
+          style={styles.signupButton}
+          onPress={handleSignUp}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.signupButtonText}>Sign Up</Text>
+          )}
         </TouchableOpacity>
 
         {/* Cancel Button */}
-        <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={() => navigation.navigate('Login')}
-        >
+        <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.navigate('Login')}>
           <Text style={styles.cancelButtonText}>Cancel</Text>
         </TouchableOpacity>
 
@@ -251,31 +304,10 @@ export default function StudentSignUpScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   gradient: { flex: 1 },
-  scrollContainer: {
-    flexGrow: 1,
-    padding: 20,
-  },
-  heading: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#EDEDED',
-    textAlign: 'center',
-    marginBottom: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-  },
-  subheading: {
-    fontSize: 16,
-    textAlign: 'center',
-    color: '#CCCCCC',
-    marginBottom: 20,
-    fontStyle: 'italic',
-  },
-  label: {
-    fontSize: 16,
-    color: '#EDEDED',
-    marginBottom: 5,
-  },
+  scrollContainer: { flexGrow: 1, padding: 20 },
+  heading: { fontSize: 28, fontWeight: 'bold', color: '#EDEDED', textAlign: 'center', marginBottom: 10 },
+  subheading: { fontSize: 16, textAlign: 'center', color: '#CCCCCC', marginBottom: 20 },
+  label: { fontSize: 16, color: '#EDEDED', marginBottom: 5 },
   input: {
     borderWidth: 1,
     borderColor: '#555555',
@@ -285,68 +317,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E1E1E',
     color: '#FFFFFF',
   },
-  studentIDContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  generateButton: {
-    backgroundColor: '#DA0037',
-    paddingHorizontal: 11,
-    paddingVertical: 8,
-    borderRadius: 10,
-    marginLeft: 10,
-  },
-  generateButtonText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#555555',
-    borderRadius: 10,
-    backgroundColor: '#1E1E1E',
-    marginBottom: 20,
-  },
-  picker: {
-    color: '#FFFFFF',
-    height: Platform.OS === 'android' ? 50 : undefined,
-  },
-  signupButton: {
-    backgroundColor: '#DA0037',
-    padding: 15,
-    borderRadius: 25,
-    alignItems: 'center',
-    marginBottom: 15,
-    shadowColor: '#DA0037',
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  signupButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-  },
-  cancelButton: {
-    borderWidth: 1,
-    borderColor: '#CCCCCC',
-    padding: 15,
-    borderRadius: 25,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  cancelButtonText: {
-    color: '#CCCCCC',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  loginRedirect: {
-    textAlign: 'center',
-    color: '#DA0037',
-    fontSize: 14,
-    marginTop: 10,
-    textDecorationLine: 'underline',
-  },
+  studentIDContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  generateButton: { backgroundColor: '#DA0037', padding: 10, borderRadius: 10, marginLeft: 10 },
+  generateButtonText: { color: '#FFFFFF', fontWeight: 'bold' },
+  pickerContainer: { borderWidth: 1, borderColor: '#555555', borderRadius: 10, backgroundColor: '#1E1E1E', marginBottom: 20 },
+  picker: { color: '#FFFFFF' },
+  signupButton: { backgroundColor: '#DA0037', padding: 15, borderRadius: 25, alignItems: 'center', marginBottom: 15 },
+  signupButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  cancelButton: { borderWidth: 1, borderColor: '#CCCCCC', padding: 15, borderRadius: 25, alignItems: 'center', marginBottom: 20 },
+  cancelButtonText: { color: '#CCCCCC', fontSize: 16, fontWeight: 'bold' },
+  loginRedirect: { textAlign: 'center', color: '#DA0037', fontSize: 14, marginTop: 10, textDecorationLine: 'underline' },
 });

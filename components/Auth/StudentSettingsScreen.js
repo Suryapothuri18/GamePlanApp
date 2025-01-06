@@ -28,8 +28,10 @@ export default function StudentSettingsScreen({ navigation }) {
 
   useEffect(() => {
     if (!studentData) {
-      Alert.alert('Error', 'Student data is missing. Returning to the dashboard.');
-      navigation.navigate('StudentDashboard');
+      Alert.alert(
+        'Warning',
+        'Student data is missing. Default values will be used until data is updated.'
+      );
     }
   }, [studentData]);
 
@@ -55,8 +57,19 @@ export default function StudentSettingsScreen({ navigation }) {
     try {
       await AsyncStorage.setItem('studentData', JSON.stringify(updatedStudent));
       setStudentData(updatedStudent);
+
+      // Clear input fields
+      setName('');
+      setAge('');
+      setGender('');
+      setEmail('');
+      setAddress('');
+      setTrainerId('');
+      setTrainerName('');
+      setSport('');
+      setEmergencyContact('');
+
       Alert.alert('Success', 'Profile updated successfully!');
-      navigation.navigate('StudentDashboard');
     } catch (error) {
       console.error('Error saving data:', error);
       Alert.alert('Error', 'Failed to save changes. Please try again.');

@@ -34,15 +34,18 @@ export default function TrainerDashboardScreen({ navigation, route }) {
         const querySnapshot = await getDocs(q);
 
         const studentsData = querySnapshot.docs.map((doc) => ({
-          ...doc.data(), // Includes all fields from the student document
-          id: doc.id, // Includes the Firestore document ID
-          streak: doc.data()?.streak || 0, // Default streak to 0 if not present
+          ...doc.data(),
+          id: doc.id, // Ensure unique IDs from Firestore
+          streak: doc.data()?.streak || 0,
         }));
 
-        if (studentsData.length === 0) {
+        // Validate for uniqueness
+        const uniqueStudents = Array.from(new Map(studentsData.map((s) => [s.id, s])).values());
+
+        if (uniqueStudents.length === 0) {
           setErrorMessage('No students found. Ask students to join using your Trainer ID.');
         } else {
-          setStudents(studentsData);
+          setStudents(uniqueStudents);
           setErrorMessage('');
         }
       } catch (error) {
@@ -83,7 +86,6 @@ export default function TrainerDashboardScreen({ navigation, route }) {
   return (
     <LinearGradient colors={['#171717', '#444444']} style={styles.gradient}>
       <View style={styles.container}>
-        {/* Trainer Profile Header */}
         <View style={styles.profileHeader}>
           <TouchableOpacity
             onPress={() => navigation.navigate('TrainerProfile', { trainerData })}
@@ -99,7 +101,6 @@ export default function TrainerDashboardScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
 
-        {/* Search Bar */}
         <View style={styles.searchBar}>
           <Ionicons name="search" size={20} color="#CCCCCC" />
           <TextInput
@@ -111,7 +112,6 @@ export default function TrainerDashboardScreen({ navigation, route }) {
           />
         </View>
 
-        {/* Students List */}
         <Text style={styles.sectionTitle}>Students List</Text>
         {errorMessage ? (
           <View style={styles.errorContainer}>
@@ -120,12 +120,16 @@ export default function TrainerDashboardScreen({ navigation, route }) {
         ) : (
           <FlatList
             data={filteredStudents}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item, index) =>
+              item.id ? `student-${item.id}` : `fallback-${index}`
+            }
             renderItem={renderStudentCard}
             contentContainerStyle={styles.studentList}
             ListEmptyComponent={
               searchQuery ? (
-                <Text style={styles.emptySearchText}>No results found for "{searchQuery}".</Text>
+                <Text style={styles.emptySearchText}>
+                  No results found for "{searchQuery}".
+                </Text>
               ) : null
             }
           />

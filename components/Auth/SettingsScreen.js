@@ -9,47 +9,74 @@ import {
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTrainerContext } from './TrainerContext'; // Import TrainerContext
 
 export default function SettingsScreen({ navigation }) {
   const { trainerData, updateTrainerData } = useTrainerContext(); // Access trainer data
-  const { trainerID, name, age, sportSpecialty, email, address } = trainerData;
+  const { trainerID } = trainerData;
 
-  const [fullName, setFullName] = useState(name || '');
-  const [trainerAge, setTrainerAge] = useState(age || '');
-  const [specialty, setSpecialty] = useState(sportSpecialty || '');
-  const [emailAddress, setEmailAddress] = useState(email || '');
-  const [trainerAddress, setTrainerAddress] = useState(address || '');
+  const [fullName, setFullName] = useState(trainerData?.name || '');
+  const [trainerAge, setTrainerAge] = useState(trainerData?.age || '');
+  const [specialty, setSpecialty] = useState(trainerData?.sportSpecialty || '');
+  const [emailAddress, setEmailAddress] = useState(trainerData?.email || '');
+  const [trainerAddress, setTrainerAddress] = useState(trainerData?.address || '');
 
   const getInitialLetter = (name) => {
     return name ? name.charAt(0).toUpperCase() : '?';
   };
 
-  const saveChanges = () => {
+  const saveChanges = async () => {
     if (!fullName || !trainerAge || !specialty || !emailAddress || !trainerAddress) {
       Alert.alert('Error', 'All fields are required.');
       return;
     }
 
-    updateTrainerData({
+    const updatedTrainerData = {
+      ...trainerData,
       name: fullName,
       age: trainerAge,
       sportSpecialty: specialty,
       email: emailAddress,
       address: trainerAddress,
-    });
+    };
 
-    Alert.alert('Success', 'Profile updated successfully!');
-    navigation.goBack();
+    try {
+      // Attempt to update trainer data in Firestore
+      await updateTrainerData(updatedTrainerData);
+
+      // Notify the user of success
+      Alert.alert('Success', 'Profile updated successfully!');
+    } catch (error) {
+      console.error('Error updating trainer data:', error.message);
+
+      // Save data locally as a fallback
+      await AsyncStorage.setItem('trainerData', JSON.stringify(updatedTrainerData));
+
+      // Notify the user about local save
+      Alert.alert(
+        'Notice',
+        'Profile updated locally but not synced with the server. Please check your permissions or network.'
+      );
+    }
+
+    // Clear the input fields
+    setFullName('');
+    setTrainerAge('');
+    setSpecialty('');
+    setEmailAddress('');
+    setTrainerAddress('');
   };
 
   return (
     <LinearGradient colors={['#171717', '#444444']} style={styles.gradient}>
       <ScrollView contentContainerStyle={styles.container}>
+        {/* Profile Placeholder */}
         <View style={styles.profilePlaceholder}>
           <Text style={styles.profileInitial}>{getInitialLetter(fullName)}</Text>
         </View>
 
+        {/* Personal Information Section */}
         <Text style={styles.sectionTitle}>Personal Information</Text>
         <TextInput
           style={styles.input}
@@ -67,6 +94,7 @@ export default function SettingsScreen({ navigation }) {
           onChangeText={setTrainerAge}
         />
 
+        {/* Professional Information Section */}
         <Text style={styles.sectionTitle}>Professional Information</Text>
         <TextInput
           style={styles.input}
@@ -76,6 +104,7 @@ export default function SettingsScreen({ navigation }) {
           onChangeText={setSpecialty}
         />
 
+        {/* Contact Information Section */}
         <Text style={styles.sectionTitle}>Contact Information</Text>
         <TextInput
           style={styles.input}
@@ -93,6 +122,7 @@ export default function SettingsScreen({ navigation }) {
           onChangeText={setTrainerAddress}
         />
 
+        {/* Save Changes Button */}
         <TouchableOpacity style={styles.saveButton} onPress={saveChanges}>
           <Text style={styles.saveButtonText}>Save Changes</Text>
         </TouchableOpacity>

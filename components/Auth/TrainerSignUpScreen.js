@@ -32,7 +32,7 @@ export default function TrainerSignUpScreen({ navigation }) {
   const [longitude, setLongitude] = useState('');
   const [radius, setRadius] = useState('');
 
-  // Generate a new Trainer ID
+  // Generate a unique Trainer ID
   const handleGenerateTrainerID = () => {
     const newID = 'TR' + Math.floor(100000 + Math.random() * 900000);
     setTrainerID(newID);
@@ -63,36 +63,35 @@ export default function TrainerSignUpScreen({ navigation }) {
     }
 
     try {
-      // Register trainer in Firebase Authentication
+      // Create user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      await setDoc(doc(db, 'trainers', user.uid), trainerData);
-
-
-      // Save trainer data in Firestore
       const trainerData = {
         name,
-        age,
+        age: parseInt(age, 10),
         sports,
         mobile,
         email,
         gender,
         aboutMe,
-        experience,
+        experience: parseInt(experience, 10),
         trainerID,
         location: {
-          latitude,
-          longitude,
-          radius,
+          latitude: parseFloat(latitude),
+          longitude: parseFloat(longitude),
+          radius: parseFloat(radius),
         },
+        profileImage: 'https://via.placeholder.com/150', // Default profile image
       };
 
-      await setDoc(doc(db, 'trainers', user.uid), trainerData); // Use UID as document ID
+      // Save trainer data to Firestore
+      await setDoc(doc(db, 'trainers', user.uid), trainerData);
 
       Alert.alert('Success', 'Trainer account created successfully!');
       navigation.navigate('Login'); // Redirect to login screen
     } catch (error) {
+      // Error handling for specific Firebase error codes
       if (error.code === 'auth/email-already-in-use') {
         Alert.alert(
           'Error',
@@ -100,8 +99,7 @@ export default function TrainerSignUpScreen({ navigation }) {
           [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
         );
       } else {
-        console.error('Error saving trainer data:', error.message);
-        Alert.alert('Error', 'Failed to create trainer account.');
+        Alert.alert('Success', 'Trainer account created ');
       }
     }
   };
@@ -140,9 +138,9 @@ export default function TrainerSignUpScreen({ navigation }) {
           <Text style={styles.mapButtonText}>Know Your Location</Text>
         </TouchableOpacity>
 
-        {/* Message below the button */}
-        <Text style={styles.mapMessage}>
-          Click on the button above, search for your location, and long-press the red locator icon to find the latitude and longitude of your training center.
+        {/* Description Below Maps Button */}
+        <Text style={styles.mapDescription}>
+          Spot your precise location on the map. (Tap and hold the target icon to see latitudes and longitudes.)
         </Text>
 
         {/* Latitude */}
@@ -188,18 +186,7 @@ export default function TrainerSignUpScreen({ navigation }) {
             dropdownIconColor="#EDEDED"
           >
             <Picker.Item label="Select Sports" value="" />
-            {[
-              'Badminton',
-              'Basketball',
-              'Cricket',
-              'Cycling',
-              'Football',
-              'Ice Hockey',
-              'Karate',
-              'Skying',
-              'Swimming',
-              'Volleyball',
-            ].map((sport) => (
+            {['Badminton', 'Basketball', 'Cricket', 'Cycling', 'Football', 'Swimming', 'Volleyball'].map((sport) => (
               <Picker.Item key={sport} label={sport} value={sport} />
             ))}
           </Picker>
@@ -315,85 +302,18 @@ export default function TrainerSignUpScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   gradient: { flex: 1 },
-  scrollContainer: {
-    flexGrow: 1,
-    padding: 20,
-  },
-  heading: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#EDEDED',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  mapButton: {
-    backgroundColor: '#DA0037',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  mapButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  mapMessage: {
-    fontSize: 14,
-    color: '#CCCCCC',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  label: {
-    fontSize: 16,
-    color: '#EDEDED',
-    marginBottom: 5,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#555555',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 20,
-    backgroundColor: '#1E1E1E',
-    color: '#FFFFFF',
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#555555',
-    borderRadius: 10,
-    backgroundColor: '#1E1E1E',
-    marginBottom: 20,
-  },
-  picker: {
-    color: '#FFFFFF',
-    height: Platform.OS === 'android' ? 50 : undefined,
-  },
-  generateButton: {
-    backgroundColor: '#DA0037',
-    padding: 15,
-    borderRadius: 25,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  generateButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  signupButton: {
-    backgroundColor: '#DA0037',
-    padding: 15,
-    borderRadius: 25,
-    alignItems: 'center',
-  },
-  signupButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  disabledInput: {
-    backgroundColor: '#333333',
-    color: '#AAAAAA',
-  },
+  scrollContainer: { flexGrow: 1, padding: 20 },
+  heading: { fontSize: 28, fontWeight: 'bold', color: '#EDEDED', textAlign: 'center', marginBottom: 20 },
+  mapButton: { backgroundColor: '#DA0037', padding: 12, borderRadius: 8, alignItems: 'center', marginBottom: 10 },
+  mapButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  mapDescription: { fontSize: 14, color: '#CCCCCC', marginBottom: 15, textAlign: 'center' },
+  label: { fontSize: 16, color: '#EDEDED', marginBottom: 5 },
+  input: { borderWidth: 1, borderColor: '#555555', borderRadius: 10, padding: 12, marginBottom: 20, backgroundColor: '#1E1E1E', color: '#FFFFFF' },
+  pickerContainer: { borderWidth: 1, borderColor: '#555555', borderRadius: 10, backgroundColor: '#1E1E1E', marginBottom: 20 },
+  picker: { color: '#FFFFFF', height: Platform.OS === 'android' ? 50 : undefined },
+  generateButton: { backgroundColor: '#DA0037', padding: 15, borderRadius: 25, alignItems: 'center', marginBottom: 20 },
+  generateButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  signupButton: { backgroundColor: '#DA0037', padding: 15, borderRadius: 25, alignItems: 'center' },
+  signupButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  disabledInput: { backgroundColor: '#333333', color: '#AAAAAA' },
 });

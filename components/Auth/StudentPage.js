@@ -4,17 +4,13 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ScrollView,
   TextInput,
-  Alert,
 } from 'react-native';
 import { Calendar } from 'react-native-calendars';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Checkbox } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { db } from '../../utils/firebaseConfig'; // Import Firestore instance
-import { doc, getDoc } from 'firebase/firestore';
 
 export default function StudentPage({ route }) {
   const { student } = route.params;
@@ -43,44 +39,11 @@ export default function StudentPage({ route }) {
       }
     };
 
-    const fetchStudentProgress = async () => {
-      try {
-        const progress = await AsyncStorage.getItem('progress');
-        if (progress) {
-          const parsedProgress = JSON.parse(progress);
-          const { streak, date } = parsedProgress;
-          setStreakDays(streak);
-
-          setMarkedDates((prevDates) => ({
-            ...prevDates,
-            [date]: {
-              selected: true,
-              marked: true,
-              selectedColor: '#DA0037',
-            },
-          }));
-        }
-      } catch (error) {
-        console.error('Error fetching student progress:', error);
-      }
-    };
-
     loadTasks();
-    fetchStudentProgress();
   }, []);
 
-  const handleMarkAttendanceInCalendar = async () => {
-    const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
-    const updatedDates = {
-      ...markedDates,
-      [today]: {
-        selected: true,
-        marked: true,
-        selectedColor: '#DA0037', // Highlight in red
-      },
-    };
-    setMarkedDates(updatedDates);
-    await AsyncStorage.setItem('markedDates', JSON.stringify(updatedDates));
+  const getInitialLetter = (name) => {
+    return name ? name.charAt(0).toUpperCase() : '?';
   };
 
   const toggleTaskCompletion = (type, id) => {
@@ -94,7 +57,7 @@ export default function StudentPage({ route }) {
     });
   };
 
-  const addTask = async () => {
+  const addTask = () => {
     if (taskInput.trim()) {
       const newTask = {
         id: (tasks[selectedToggle].length + 1).toString(),
@@ -110,13 +73,26 @@ export default function StudentPage({ route }) {
     }
   };
 
+  const removeTask = (type, id) => {
+    setTasks((prevTasks) => {
+      const updatedTasks = prevTasks[type].filter((task) => task.id !== id);
+      const newTasks = { ...prevTasks, [type]: updatedTasks };
+      AsyncStorage.setItem('tasks', JSON.stringify(newTasks));
+      return newTasks;
+    });
+  };
+
   return (
     <LinearGradient colors={['#171717', '#444444']} style={styles.gradient}>
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.header}>
-          <Image source={{ uri: student.image }} style={styles.profileImage} />
+          <View style={styles.profilePlaceholder}>
+            <Text style={styles.profileInitial}>
+              {getInitialLetter(student.name)}
+            </Text>
+          </View>
           <Text style={styles.profileName}>{student.name}</Text>
-          <Text style={styles.profileId}>@{student.id}</Text>
+          <Text style={styles.profileId}>ID: 474601</Text>
         </View>
 
         <View style={styles.streakContainer}>
@@ -181,6 +157,12 @@ export default function StudentPage({ route }) {
               color="#DA0037"
             />
             <Text style={styles.taskName}>{task.name}</Text>
+            <TouchableOpacity
+              style={styles.removeButton}
+              onPress={() => removeTask(selectedToggle, task.id)}
+            >
+              <Text style={styles.removeButtonText}>Remove</Text>
+            </TouchableOpacity>
           </View>
         ))}
 
@@ -211,14 +193,16 @@ const styles = StyleSheet.create({
   gradient: { flex: 1 },
   container: { padding: 20 },
   header: { alignItems: 'center', marginBottom: 20 },
-  profileImage: {
+  profilePlaceholder: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    borderWidth: 2,
-    borderColor: '#DA0037',
+    backgroundColor: '#DA0037',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 10,
   },
+  profileInitial: { fontSize: 36, color: '#FFFFFF', fontWeight: 'bold' },
   profileName: { fontSize: 24, fontWeight: 'bold', color: '#FFFFFF' },
   profileId: { fontSize: 16, color: '#CCCCCC' },
   streakContainer: { alignItems: 'center', marginVertical: 20 },
@@ -235,6 +219,8 @@ const styles = StyleSheet.create({
   addButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#DA0037', marginBottom: 10 },
   taskItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, padding: 10, backgroundColor: '#1E1E1E', borderRadius: 10 },
-  taskName: { marginLeft: 10, fontSize: 16, color: '#FFFFFF' },
+  taskName: { flex: 1, fontSize: 16, color: '#FFFFFF' },
+  removeButton: { paddingVertical: 5, paddingHorizontal: 10, backgroundColor: '#DA0037', borderRadius: 5 },
+  removeButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: 'bold' },
   calendar: { marginVertical: 20 },
 });

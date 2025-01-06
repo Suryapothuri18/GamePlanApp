@@ -54,6 +54,7 @@ export default function TrainerProfileScreen({ navigation, route }) {
   return (
     <LinearGradient colors={['#171717', '#444444']} style={styles.gradient}>
       <View style={styles.container}>
+        {/* Settings Button */}
         <TouchableOpacity
           style={styles.settingsButton}
           onPress={() => navigation.navigate('SettingsScreen', { profileData })}
@@ -61,6 +62,7 @@ export default function TrainerProfileScreen({ navigation, route }) {
           <Ionicons name="settings-outline" size={24} color="#FFFFFF" />
         </TouchableOpacity>
 
+        {/* Profile Header */}
         <View style={styles.profileHeader}>
           <View style={styles.profilePlaceholder}>
             <Text style={styles.profileInitial}>{getInitialLetter(profileData?.name)}</Text>
@@ -69,14 +71,17 @@ export default function TrainerProfileScreen({ navigation, route }) {
           <Text style={styles.profileId}>ID: {profileData?.trainerID || 'N/A'}</Text>
         </View>
 
+        {/* Personal Information Section */}
         <View style={styles.infoSection}>
           <Text style={styles.infoTitle}>Personal Information</Text>
           <Text style={styles.infoText}>Trainer ID: {profileData?.trainerID || 'N/A'}</Text>
           <Text style={styles.infoText}>Age: {profileData?.age || 'N/A'}</Text>
           <Text style={styles.infoText}>
-            Training Center: {profileData?.trainingCenter || 'N/A'}
+            Training Address: {profileData?.trainingCenter || 'Kungsmarken'}
           </Text>
-          <Text style={styles.infoText}>Sport Specialty: {profileData?.sport || 'N/A'}</Text>
+          <Text style={styles.infoText}>
+            Specialty: {profileData?.sport || 'Cricket'}
+          </Text>
         </View>
       </View>
     </LinearGradient>

@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { Image, View, Text, StyleSheet } from 'react-native';
-import { StudentProvider } from './components/Auth/StudentContext'; // Import StudentProvider
-import { TrainerProvider } from './components/Auth/TrainerContext'; // Import TrainerProvider
+import { Image, View, Text, StyleSheet, Alert } from 'react-native';
+import * as Location from 'expo-location';
+import { StudentProvider } from './components/Auth/StudentContext';
+import { TrainerProvider } from './components/Auth/TrainerContext';
 
 // Import screens
 import RegisterScreen from './components/Auth/RegisterScreen';
@@ -19,6 +20,7 @@ import SettingsScreen from './components/Auth/SettingsScreen';
 import StudentProfileScreen from './components/Auth/StudentProfileScreen';
 import StudentSettingsScreen from './components/Auth/StudentSettingsScreen';
 import StudentPage from './components/Auth/StudentPage';
+import AttendanceScreen from './components/Auth/AttendanceScreen';
 
 const Stack = createStackNavigator();
 
@@ -37,6 +39,35 @@ const HeaderLogo = () => (
 );
 
 export default function App() {
+  const [trainerLocation, setTrainerLocation] = useState({
+    latitude: "56.1971946",
+    longitude: "15.6188414",
+    radius: "1000",
+  });
+
+  useEffect(() => {
+    const fetchLocation = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Denied', 'Location permission is required to use this feature.');
+          return;
+        }
+
+        const currentLocation = await Location.getCurrentPositionAsync({});
+        setTrainerLocation({
+          latitude: currentLocation.coords.latitude,
+          longitude: currentLocation.coords.longitude,
+          radius: '1000',
+        });
+      } catch (error) {
+        console.error('Error fetching location:', error);
+      }
+    };
+
+    fetchLocation();
+  }, []);
+
   return (
     <StudentProvider>
       <TrainerProvider>
@@ -50,7 +81,6 @@ export default function App() {
               headerTitle: () => <HeaderLogo />,
             }}
           >
-            {/* Screens */}
             <Stack.Screen
               name="Loading"
               component={LoadingScreen}
@@ -63,7 +93,17 @@ export default function App() {
             />
             <Stack.Screen name="Register" component={RegisterScreen} />
             <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-            <Stack.Screen name="TrainerSignUp" component={TrainerSignUpScreen} />
+            <Stack.Screen
+              name="TrainerSignUp"
+              options={{ headerShown: true }}
+            >
+              {(props) => (
+                <TrainerSignUpScreen
+                  {...props}
+                  saveTrainerLocation={setTrainerLocation}
+                />
+              )}
+            </Stack.Screen>
             <Stack.Screen name="StudentSignUp" component={StudentSignUpScreen} />
             <Stack.Screen
               name="TrainerDashboard"
@@ -76,13 +116,19 @@ export default function App() {
             />
             <Stack.Screen
               name="StudentDashboard"
-              component={StudentDashboardScreen}
               options={{
                 title: 'Student Dashboard',
                 headerStyle: { backgroundColor: '#171717' },
                 headerTintColor: '#fff',
               }}
-            />
+            >
+              {(props) => (
+                <StudentDashboardScreen
+                  {...props}
+                  trainerLocation={trainerLocation}
+                />
+              )}
+            </Stack.Screen>
             <Stack.Screen
               name="StudentProfile"
               component={StudentProfileScreen}
@@ -120,6 +166,15 @@ export default function App() {
               }}
             />
             <Stack.Screen name="StudentPage" component={StudentPage} />
+            <Stack.Screen
+              name="AttendanceScreen"
+              component={AttendanceScreen}
+              options={{
+                title: 'Attendance',
+                headerStyle: { backgroundColor: '#171717' },
+                headerTintColor: '#fff',
+              }}
+            />
           </Stack.Navigator>
         </NavigationContainer>
       </TrainerProvider>
